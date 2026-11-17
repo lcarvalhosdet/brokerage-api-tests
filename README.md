@@ -2,7 +2,7 @@
 
 A personal project with two parts: a small brokerage simulator API and a black-box test suite for it, written in **Java with REST Assured and JUnit 5**. Every push runs the whole suite in GitHub Actions.
 
-The API opens accounts, lists instruments and fills market orders. The test suite is the point of the project: contract checks, business rules, negative and boundary cases. Next come data consistency, concurrency, real-time updates and load testing (see the [roadmap](#roadmap)).
+The API opens accounts, lists instruments and fills market orders. The test suite is the point of the project: contract checks, business rules, negative and boundary cases. Testing the API has already found [four real bugs](#bugs-found), each now guarded by a regression test. Next come data consistency, concurrency, real-time updates and load testing (see the [roadmap](#roadmap)).
 
 ## Stack
 
@@ -44,7 +44,18 @@ api-tests/       the black-box test suite (REST Assured + JUnit 5)
 - **Exact money.** JSON numbers are read as `BigDecimal`, never as `double`, so amounts are compared without rounding errors.
 - **Smoke and full runs.** Key tests carry `@Tag("smoke")` for a quick check of a new environment.
 
-Subtle risks the suite guards: by default, Jackson silently turns `1.5` into `1` for an integer field, so an order for 1.5 shares would buy 1. It also reads `"side": 1` as the second enum value, so the order becomes a sell, and it ignores fields it does not know, so an order sent with a `limitPrice` would be filled at the market price. The API turns off all three conversions, and tests make sure each of these requests is rejected.
+A subtle risk the suite guards: by default, Jackson silently turns `1.5` into `1` for an integer field, so an order for 1.5 shares would buy 1. The API disables that conversion, and a test makes sure `1.5` is rejected.
+
+## Bugs found
+
+The first version of the suite was green. Probing the running API with parallel requests and unusual inputs then found four bugs that it had missed. Each one now has a regression test that failed against the old API and passes against the fix.
+
+1. **Inconsistent reads under load.** While orders were filled in parallel, 206 of 3,221 reads of `GET /accounts/{id}` broke the rule that the cash plus the value of the positions equals the initial cash. A read could show the cash from before an order next to the positions from after it, as if money had appeared or disappeared. The account and its positions were read in two queries under PostgreSQL's default `READ COMMITTED` level, where each query sees its own snapshot. The read now runs at `REPEATABLE READ`, so both queries see the same snapshot. Test: [`ConcurrencyTest`](api-tests/src/test/java/com/lcarvalho/brokerage/tests/ConcurrencyTest.java).
+2. **A number read as the order side.** The suite guarded against `1.5` becoming `1` from the start, but by default Jackson also reads `"side": 1` (or `"1"`) as the second enum value, so the order became a sell. The API now rejects enum values sent as numbers. Test: `sideSentAsNumberIsRejected` in [`OrdersTest`](api-tests/src/test/java/com/lcarvalho/brokerage/tests/OrdersTest.java).
+3. **Unknown fields ignored.** An order sent with `"orderType": "LIMIT", "limitPrice": 0.01` was filled at the market price, because Jackson ignored the fields it did not know. A client that believed it sent a limit order got a market order instead. The API now rejects unknown fields. Tests: `unknownFieldIsRejected` in `OrdersTest` and `rejectsUnknownField` in [`AccountsTest`](api-tests/src/test/java/com/lcarvalho/brokerage/tests/AccountsTest.java).
+4. **A server error from one character.** A NUL character (`\u0000`) in the owner name or in the order symbol reached PostgreSQL, which cannot store it in a text column, and the API answered 500. The symbol must now match `[A-Z0-9]{1,10}`, and names cannot contain control characters. Tests: `controlCharacterInSymbolIsRejected` in `OrdersTest` and the control-character case in `AccountsTest`.
+
+The same probes found no overdraft: 40 buys sent at the same time, with cash for exactly 10, filled exactly 10. After 12,052 concurrent orders, the balance still matched the order history to the cent. Turning these two checks into tests is on the roadmap.
 
 ## What is covered
 
