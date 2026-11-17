@@ -3,6 +3,7 @@ package com.lcarvalho.brokerage.tests;
 import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.math.BigDecimal;
@@ -159,6 +160,9 @@ class OrdersTest extends BaseApiTest {
                         new PlaceOrder(accountId, SYMBOL, "BUY", 1_000_001), "VALIDATION_ERROR"),
                 arguments("missing quantity", new PlaceOrder(accountId, SYMBOL, "BUY", null), "VALIDATION_ERROR"),
                 arguments("missing symbol", new PlaceOrder(accountId, null, "BUY", 1), "VALIDATION_ERROR"),
+                arguments("lowercase symbol", new PlaceOrder(accountId, "petr4", "BUY", 1), "VALIDATION_ERROR"),
+                arguments("symbol over 10 characters",
+                        new PlaceOrder(accountId, "ABCDEFGHIJK", "BUY", 1), "VALIDATION_ERROR"),
                 arguments("missing side", new PlaceOrder(accountId, SYMBOL, null, 1), "VALIDATION_ERROR"),
                 arguments("missing account", new PlaceOrder(null, SYMBOL, "BUY", 1), "VALIDATION_ERROR"),
                 arguments("unknown side", new PlaceOrder(accountId, SYMBOL, "HOLD", 1), "MALFORMED_REQUEST"),
@@ -186,6 +190,61 @@ class OrdersTest extends BaseApiTest {
                 .body("code", equalTo("MALFORMED_REQUEST"));
 
         assertThat(accounts.getAccount(account.id()).positions()).isEmpty();
+    }
+
+    static Stream<Arguments> sidesSentAsNumbers() {
+        // By default Jackson reads a number as the position of the enum value: 0 is BUY and 1 is SELL
+        return Stream.of(
+                arguments("number 0", 0),
+                arguments("number 1", 1),
+                arguments("text \"0\"", "0"),
+                arguments("text \"1\"", "1"));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("sidesSentAsNumbers")
+    @DisplayName("A side sent as a number is rejected instead of being read as BUY or SELL")
+    void sideSentAsNumberIsRejected(String scenario, Object side) {
+        Account account = accounts.createAccount(INITIAL_CASH);
+        orders.placeOrder(account.id(), SYMBOL, "BUY", 10);
+        Account before = accounts.getAccount(account.id());
+
+        orders.place(Map.of("accountId", account.id(), "symbol", SYMBOL, "side", side, "quantity", 1))
+                .then().statusCode(400)
+                .body(matchesJsonSchemaInClasspath("schemas/error.json"))
+                .body("code", equalTo("MALFORMED_REQUEST"));
+
+        assertThat(accounts.getAccount(account.id())).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("An order with a field the API does not know is rejected, not filled at market")
+    void unknownFieldIsRejected() {
+        Account account = accounts.createAccount(INITIAL_CASH);
+
+        // A client that believes it sends a limit order must not get a market order filled
+        orders.place(Map.of("accountId", account.id(), "symbol", SYMBOL, "side", "BUY", "quantity", 1,
+                        "orderType", "LIMIT", "limitPrice", new BigDecimal("0.01")))
+                .then().statusCode(400)
+                .body(matchesJsonSchemaInClasspath("schemas/error.json"))
+                .body("code", equalTo("MALFORMED_REQUEST"));
+
+        Account after = accounts.getAccount(account.id());
+        assertThat(after.cashBalance()).isEqualByComparingTo(INITIAL_CASH);
+        assertThat(after.positions()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("A symbol with a control character is rejected with 400, not a server error")
+    void controlCharacterInSymbolIsRejected() {
+        // The account exists, so without validation the request would reach the instrument lookup
+        Account account = accounts.createAccount(INITIAL_CASH);
+
+        orders.place(new PlaceOrder(account.id(), "PETR4\u0000", "BUY", 1))
+                .then().statusCode(400)
+                .body(matchesJsonSchemaInClasspath("schemas/error.json"))
+                .body("code", equalTo("VALIDATION_ERROR"))
+                .body("details.field", hasItem("symbol"));
     }
 
     @Test

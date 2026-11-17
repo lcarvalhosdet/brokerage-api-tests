@@ -39,11 +39,12 @@ api-tests/       the black-box test suite (REST Assured + JUnit 5)
 - **Contracts.** Every response is checked against a JSON Schema with `additionalProperties: false`, so a renamed or unexpected field fails the build.
 - **Negative and boundary cases.** Exact cash versus one cent short. Quantities of zero, negative, fractional and above the limit. Malformed ids, unknown resources, and a missing or wrong API key.
 - **A rejected order changes nothing.** After a 422, the tests read the account again to prove that the balance, the positions and the order history did not change.
+- **Consistent reads under load.** While orders are filled in parallel, every read of the account must add up. Prices are fixed in the simulator, so the cash plus the value of the positions must always equal the initial cash.
 - **Independent tests.** Each test creates its own account, so tests run in any order and can run in parallel.
 - **Exact money.** JSON numbers are read as `BigDecimal`, never as `double`, so amounts are compared without rounding errors.
 - **Smoke and full runs.** Key tests carry `@Tag("smoke")` for a quick check of a new environment.
 
-A subtle risk the suite guards: by default, Jackson silently turns `1.5` into `1` for an integer field, so an order for 1.5 shares would buy 1. The API disables that conversion, and a test makes sure `1.5` is rejected.
+Subtle risks the suite guards: by default, Jackson silently turns `1.5` into `1` for an integer field, so an order for 1.5 shares would buy 1. It also reads `"side": 1` as the second enum value, so the order becomes a sell, and it ignores fields it does not know, so an order sent with a `limitPrice` would be filled at the market price. The API turns off all three conversions, and tests make sure each of these requests is rejected.
 
 ## What is covered
 
@@ -51,8 +52,9 @@ A subtle risk the suite guards: by default, Jackson silently turns `1.5` into `1
 | --- | --- |
 | Authentication | Public health check. 401 without the key or with a wrong key |
 | Instruments | List and lookup, contract, unknown symbol |
-| Accounts | Creation with `Location` header, lookup, validation of each field, unknown and malformed ids |
-| Orders | Buy and sell update cash and positions. Exact-cash boundary. Insufficient funds and position leave the account unchanged. Payload validation, fractional quantity, order lookup and history |
+| Accounts | Creation with `Location` header, lookup, validation of each field, control characters, unknown fields, unknown and malformed ids |
+| Orders | Buy and sell update cash and positions. Exact-cash boundary. Insufficient funds and position leave the account unchanged. Payload validation, symbol format, fractional quantity, side sent as a number, unknown fields, order lookup and history |
+| Concurrency | Every read of an account stays consistent while orders are filled in parallel |
 | Order rules (unit) | Totals, balances and positions after buys and sells, and every rejection boundary |
 
 ## Running locally

@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import com.lcarvalho.brokerage.common.NotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -23,7 +24,12 @@ public class AccountService {
         return get(id);
     }
 
-    @Transactional(readOnly = true)
+    /**
+     * Reads the account and its positions from one snapshot of the database. With the default
+     * READ COMMITTED level, each query sees its own snapshot, so an order filled between the two
+     * queries would show the cash from before the order next to the positions from after it.
+     */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public AccountResponse get(UUID id) {
         AccountRepository.AccountRow account = accounts.findById(id)
                 .orElseThrow(() -> new NotFoundException("ACCOUNT_NOT_FOUND", "Account " + id + " not found"));

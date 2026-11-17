@@ -9,6 +9,11 @@ spring:
     deserialization:
       # Reject 1.5 in an integer field instead of silently truncating it to 1
       accept-float-as-int: false
+      # Reject "side": 1 instead of silently reading it as the second enum value, SELL
+      fail-on-numbers-for-enums: true
+      # Reject fields the API does not know, such as a limit price sent with a market order,
+      # instead of silently ignoring them
+      fail-on-unknown-properties: true
     generator:
       write-bigdecimal-as-plain: true
 

@@ -7,6 +7,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -73,6 +74,8 @@ class AccountsTest extends BaseApiTest {
                 arguments("missing owner name", new CreateAccount(null, cash), "ownerName"),
                 arguments("blank owner name", new CreateAccount("   ", cash), "ownerName"),
                 arguments("owner name over 100 characters", new CreateAccount("x".repeat(101), cash), "ownerName"),
+                // PostgreSQL cannot store a NUL character, so the API must refuse it before the database
+                arguments("control character in owner name", new CreateAccount("QA\u0000Investor", cash), "ownerName"),
                 arguments("missing initial cash", new CreateAccount("QA", null), "initialCash"),
                 arguments("negative initial cash", new CreateAccount("QA", new BigDecimal("-0.01")), "initialCash"),
                 arguments("three decimal places", new CreateAccount("QA", new BigDecimal("10.001")), "initialCash"));
@@ -87,6 +90,19 @@ class AccountsTest extends BaseApiTest {
                 .body(matchesJsonSchemaInClasspath("schemas/error.json"))
                 .body("code", equalTo("VALIDATION_ERROR"))
                 .body("details.field", hasItem(invalidField));
+    }
+
+    @Test
+    @DisplayName("POST /accounts rejects a field the API does not know")
+    void rejectsUnknownField() {
+        // A client must not believe it set the balance directly: the unknown field is refused, not ignored
+        accounts.create(Map.of(
+                        "ownerName", TestData.ownerName(),
+                        "initialCash", new BigDecimal("100.00"),
+                        "cashBalance", new BigDecimal("1000000.00")))
+                .then().statusCode(400)
+                .body(matchesJsonSchemaInClasspath("schemas/error.json"))
+                .body("code", equalTo("MALFORMED_REQUEST"));
     }
 
     @Test
