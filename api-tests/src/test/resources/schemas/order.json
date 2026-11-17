@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Order",
+  "type": "object",
+  "required": ["id", "accountId", "symbol", "side", "quantity", "price", "total", "status", "createdAt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "accountId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "symbol": { "type": "string", "minLength": 1 },
+    "side": { "enum": ["BUY", "SELL"] },
+    "quantity": { "type": "integer", "minimum": 1 },
+    "price": { "type": "number", "minimum": 0, "exclusiveMinimum": true },
+    "total": { "type": "number", "minimum": 0, "exclusiveMinimum": true },
+    "status": { "enum": ["FILLED"] },
+    "createdAt": { "type": "string", "minLength": 1 }
+  }
+}

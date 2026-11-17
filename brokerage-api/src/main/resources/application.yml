@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: brokerage-api
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/brokerage}
+    username: ${DATABASE_USER:brokerage}
+    password: ${DATABASE_PASSWORD:brokerage}
+  jackson:
+    deserialization:
+      # Reject 1.5 in an integer field instead of silently truncating it to 1
+      accept-float-as-int: false
+    generator:
+      write-bigdecimal-as-plain: true
+
+brokerage:
+  api-key: ${BROKERAGE_API_KEY:local-dev-key}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

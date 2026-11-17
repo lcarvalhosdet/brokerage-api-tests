@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Account",
+  "type": "object",
+  "required": ["id", "ownerName", "cashBalance", "positions", "createdAt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ownerName": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "cashBalance": { "type": "number", "minimum": 0 },
+    "positions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["symbol", "quantity"],
+        "additionalProperties": false,
+        "properties": {
+          "symbol": { "type": "string", "minLength": 1 },
+          "quantity": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "createdAt": { "type": "string", "minLength": 1 }
+  }
+}

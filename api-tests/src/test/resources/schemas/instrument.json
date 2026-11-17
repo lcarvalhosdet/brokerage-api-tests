@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Instrument",
+  "type": "object",
+  "required": ["symbol", "name", "price"],
+  "additionalProperties": false,
+  "properties": {
+    "symbol": { "type": "string", "minLength": 1, "maxLength": 10 },
+    "name": { "type": "string", "minLength": 1 },
+    "price": { "type": "number", "minimum": 0, "exclusiveMinimum": true }
+  }
+}

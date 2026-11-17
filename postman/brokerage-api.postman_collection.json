@@ -1,0 +1,388 @@
+{
+  "info": {
+    "name": "Brokerage API",
+    "description": "Every endpoint of the brokerage simulator. Run the 'Happy path' requests in order: the account and order ids are saved in collection variables automatically. The API key is set once, at collection level.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{apiKey}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "apiKey",
+      "value": "local-dev-key"
+    },
+    {
+      "key": "accountId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "buyTotal",
+      "value": ""
+    },
+    {
+      "key": "sellTotal",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Happy path",
+      "item": [
+        {
+          "name": "1. Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Public endpoint: no API key needed."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"API is UP\", () => pm.expect(pm.response.json().status).to.eql(\"UP\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. List instruments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/instruments"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"has instruments\", () => pm.expect(pm.response.json()).to.be.an(\"array\").that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Get instrument PETR4",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/instruments/PETR4"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"symbol is PETR4\", () => pm.expect(pm.response.json().symbol).to.eql(\"PETR4\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Create account",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/accounts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerName\": \"Leandro\",\n  \"initialCash\": 10000.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Saves the new account id in the collection variable accountId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const account = pm.response.json();",
+                  "pm.test(\"starts with the initial cash\", () => pm.expect(account.cashBalance).to.eql(10000));",
+                  "pm.collectionVariables.set(\"accountId\", account.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Buy 10 PETR4",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountId\": \"{{accountId}}\",\n  \"symbol\": \"PETR4\",\n  \"side\": \"BUY\",\n  \"quantity\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Saves the order id in orderId and the order total in buyTotal."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const order = pm.response.json();",
+                  "pm.test(\"order is filled\", () => pm.expect(order.status).to.eql(\"FILLED\"));",
+                  "pm.collectionVariables.set(\"orderId\", order.id);",
+                  "pm.collectionVariables.set(\"buyTotal\", order.total);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Sell 4 PETR4",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountId\": \"{{accountId}}\",\n  \"symbol\": \"PETR4\",\n  \"side\": \"SELL\",\n  \"quantity\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"sellTotal\", pm.response.json().total);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. Get account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/{{accountId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const account = pm.response.json();",
+                  "const expectedCash = 10000 - Number(pm.collectionVariables.get(\"buyTotal\")) + Number(pm.collectionVariables.get(\"sellTotal\"));",
+                  "pm.test(\"cash reflects the buy and the sell\", () => pm.expect(account.cashBalance).to.be.closeTo(expectedCash, 0.001));",
+                  "pm.test(\"holds 6 PETR4\", () => pm.expect(account.positions).to.deep.equal([{ symbol: \"PETR4\", quantity: 6 }]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. Account order history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/{{accountId}}/orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"buy first, then sell\", () => pm.expect(pm.response.json().map(o => o.side)).to.eql([\"BUY\", \"SELL\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. Get order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/orders/{{orderId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"is the buy order\", () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get(\"orderId\")));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Errors",
+      "item": [
+        {
+          "name": "Missing API key returns 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/instruments",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"code UNAUTHORIZED\", () => pm.expect(pm.response.json().code).to.eql(\"UNAUTHORIZED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Insufficient funds returns 422",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountId\": \"{{accountId}}\",\n  \"symbol\": \"PETR4\",\n  \"side\": \"BUY\",\n  \"quantity\": 1000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Run after '4. Create account': 1000 shares cost more than the account has."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"code INSUFFICIENT_FUNDS\", () => pm.expect(pm.response.json().code).to.eql(\"INSUFFICIENT_FUNDS\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Zero quantity returns 400",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountId\": \"{{accountId}}\",\n  \"symbol\": \"PETR4\",\n  \"side\": \"BUY\",\n  \"quantity\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"names the quantity field\", () => pm.expect(pm.response.json().details.map(d => d.field)).to.include(\"quantity\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown account returns 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/00000000-0000-0000-0000-000000000000"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"code ACCOUNT_NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"ACCOUNT_NOT_FOUND\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
