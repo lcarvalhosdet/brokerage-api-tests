@@ -23,9 +23,15 @@ import com.lcarvalho.brokerage.tests.clients.OrdersClient;
 import com.lcarvalho.brokerage.tests.model.Account;
 import com.lcarvalho.brokerage.tests.model.PlaceOrder;
 import com.lcarvalho.brokerage.tests.support.BaseApiTest;
+import com.lcarvalho.brokerage.tests.support.Specs;
+import io.qameta.allure.Allure;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+@Epic("Trading")
+@Feature("Concurrency")
 @DisplayName("Concurrency")
 class ConcurrencyTest extends BaseApiTest {
 
@@ -35,8 +41,10 @@ class ConcurrencyTest extends BaseApiTest {
     private static final int READERS = 4;
     private static final Duration DURATION = Duration.ofSeconds(3);
 
-    private final AccountsClient accounts = new AccountsClient();
-    private final OrdersClient orders = new OrdersClient();
+    // The loop below sends thousands of requests. Attaching each one to the Allure report would bury it
+    // and slow down the very load the test relies on, so these two clients attach nothing
+    private final AccountsClient accounts = new AccountsClient(Specs.authenticatedWithoutAttachments());
+    private final OrdersClient orders = new OrdersClient(Specs.authenticatedWithoutAttachments());
     private final InstrumentsClient instruments = new InstrumentsClient();
 
     @Test
@@ -87,6 +95,14 @@ class ConcurrencyTest extends BaseApiTest {
         } finally {
             pool.shutdownNow();
         }
+
+        // In the report, a summary of the load stands in for the requests that were not attached
+        Allure.addAttachment("Load summary", "text/plain", """
+                Writers: %d, readers: %d, duration: %d s
+                Orders filled: %d
+                Account reads: %d, inconsistent: %d
+                """.formatted(WRITERS, READERS, DURATION.toSeconds(),
+                filledOrders.get(), reads.get(), inconsistentReads.size()));
 
         assertThat(filledOrders.get()).as("orders filled while the account was read").isPositive();
         assertThat(inconsistentReads.size())

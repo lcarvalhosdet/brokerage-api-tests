@@ -2,6 +2,7 @@ package com.lcarvalho.brokerage.tests.support;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.qameta.allure.restassured.AllureRestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.JsonConfig;
 import io.restassured.config.LogConfig;
@@ -33,6 +34,14 @@ public final class Specs {
         return base().build();
     }
 
+    /**
+     * Requests that carry the valid API key, left out of the Allure report. For tests that send
+     * thousands of requests: attaching each one would bury the report and slow down the load.
+     */
+    public static RequestSpecification authenticatedWithoutAttachments() {
+        return baseWithoutAttachments().addHeader(API_KEY_HEADER, ApiConfig.apiKey()).build();
+    }
+
     public static RestAssuredConfig config() {
         return RestAssuredConfig.config()
                 // Read decimal JSON numbers as BigDecimal, so money is compared without float rounding
@@ -41,11 +50,19 @@ public final class Specs {
                 .objectMapperConfig(ObjectMapperConfig.objectMapperConfig()
                         .jackson2ObjectMapperFactory((type, charset) -> new ObjectMapper()
                                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)))
-                // Print the full request and response only when a check fails
-                .logConfig(LogConfig.logConfig().enableLoggingOfRequestAndResponseIfValidationFails());
+                // Print the full request and response only when a check fails. The key is masked
+                // there and in the Allure report, which is public: -DapiKey can be a real key
+                .logConfig(LogConfig.logConfig()
+                        .enableLoggingOfRequestAndResponseIfValidationFails()
+                        .blacklistHeader(API_KEY_HEADER));
     }
 
     private static RequestSpecBuilder base() {
+        // Attach each request and its response to the current test in the Allure report
+        return baseWithoutAttachments().addFilter(new AllureRestAssured());
+    }
+
+    private static RequestSpecBuilder baseWithoutAttachments() {
         return new RequestSpecBuilder()
                 .setConfig(config())
                 .setBaseUri(ApiConfig.baseUrl())
