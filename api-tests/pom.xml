@@ -18,6 +18,11 @@
         <!-- Override on the command line: mvn test -DbaseUrl=... -DapiKey=... -->
         <baseUrl>http://localhost:8080</baseUrl>
         <apiKey>local-dev-key</apiKey>
+        <!-- Allure Java 3 targets REST Assured 6. The Spring Boot parent brings REST Assured 5,
+             so the suite stays on the 2.x line, which is still maintained. -->
+        <allure.version>2.35.6</allure.version>
+        <!-- Version of the Allure 2 command line that turns the results into the HTML report -->
+        <allure-report.version>2.46.2</allure-report.version>
     </properties>
 
     <dependencies>
@@ -48,6 +53,24 @@
             <artifactId>jackson-databind</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-jupiter</artifactId>
+            <version>${allure.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-rest-assured</artifactId>
+            <version>${allure.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Allure reports its own problems through SLF4J; without a provider they would be dropped -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -59,7 +82,18 @@
                     <systemPropertyVariables>
                         <baseUrl>${baseUrl}</baseUrl>
                         <apiKey>${apiKey}</apiKey>
+                        <!-- Keep the results in target/, so mvn clean removes the previous run -->
+                        <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
                     </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <!-- mvn allure:report writes the HTML report to target/site/allure-maven-plugin -->
+            <plugin>
+                <groupId>io.qameta.allure</groupId>
+                <artifactId>allure-maven</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <reportVersion>${allure-report.version}</reportVersion>
                 </configuration>
             </plugin>
         </plugins>

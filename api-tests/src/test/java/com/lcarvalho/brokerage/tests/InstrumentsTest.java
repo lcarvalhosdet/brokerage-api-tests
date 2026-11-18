@@ -9,10 +9,14 @@ import java.math.BigDecimal;
 
 import com.lcarvalho.brokerage.tests.clients.InstrumentsClient;
 import com.lcarvalho.brokerage.tests.support.BaseApiTest;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+@Epic("Market data")
+@Feature("Instruments")
 @DisplayName("Instruments")
 class InstrumentsTest extends BaseApiTest {
 

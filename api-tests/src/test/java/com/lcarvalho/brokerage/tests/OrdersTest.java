@@ -19,6 +19,8 @@ import com.lcarvalho.brokerage.tests.model.Order;
 import com.lcarvalho.brokerage.tests.model.PlaceOrder;
 import com.lcarvalho.brokerage.tests.model.Position;
 import com.lcarvalho.brokerage.tests.support.BaseApiTest;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -27,6 +29,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@Epic("Trading")
+@Feature("Orders")
 @DisplayName("Orders")
 class OrdersTest extends BaseApiTest {
 
@@ -170,7 +174,7 @@ class OrdersTest extends BaseApiTest {
                         new PlaceOrder("not-a-uuid", SYMBOL, "BUY", 1), "MALFORMED_REQUEST"));
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest(name = "({0})")
     @MethodSource("invalidOrders")
     @DisplayName("POST /orders rejects an invalid payload with 400")
     void rejectsInvalidOrder(String scenario, PlaceOrder request, String expectedCode) {
@@ -201,7 +205,7 @@ class OrdersTest extends BaseApiTest {
                 arguments("text \"1\"", "1"));
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest(name = "({0})")
     @MethodSource("sidesSentAsNumbers")
     @DisplayName("A side sent as a number is rejected instead of being read as BUY or SELL")
     void sideSentAsNumberIsRejected(String scenario, Object side) {

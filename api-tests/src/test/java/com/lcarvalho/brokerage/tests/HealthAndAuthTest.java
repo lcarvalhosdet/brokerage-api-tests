@@ -7,10 +7,14 @@ import static org.hamcrest.Matchers.equalTo;
 import com.lcarvalho.brokerage.tests.clients.InstrumentsClient;
 import com.lcarvalho.brokerage.tests.support.BaseApiTest;
 import com.lcarvalho.brokerage.tests.support.Specs;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+@Epic("Security")
+@Feature("Authentication")
 @DisplayName("Health check and authentication")
 class HealthAndAuthTest extends BaseApiTest {
 

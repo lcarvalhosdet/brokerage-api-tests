@@ -16,6 +16,8 @@ import com.lcarvalho.brokerage.tests.model.Account;
 import com.lcarvalho.brokerage.tests.model.CreateAccount;
 import com.lcarvalho.brokerage.tests.support.BaseApiTest;
 import com.lcarvalho.brokerage.tests.support.TestData;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -24,6 +26,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@Epic("Trading")
+@Feature("Accounts")
 @DisplayName("Accounts")
 class AccountsTest extends BaseApiTest {
 
@@ -81,7 +85,7 @@ class AccountsTest extends BaseApiTest {
                 arguments("three decimal places", new CreateAccount("QA", new BigDecimal("10.001")), "initialCash"));
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest(name = "({0})")
     @MethodSource("invalidAccounts")
     @DisplayName("POST /accounts rejects an invalid payload and names the field")
     void rejectsInvalidAccount(String scenario, CreateAccount request, String invalidField) {

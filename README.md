@@ -1,6 +1,8 @@
 # Brokerage API: test automation with REST Assured
 
-A personal project with two parts: a small brokerage simulator API and a black-box test suite for it, written in **Java with REST Assured and JUnit 5**. Every push runs the whole suite in GitHub Actions.
+[![CI](https://github.com/lcarvalhosdet/brokerage-api-tests/actions/workflows/ci.yml/badge.svg)](https://github.com/lcarvalhosdet/brokerage-api-tests/actions/workflows/ci.yml)
+
+A personal project with two parts: a small brokerage simulator API and a black-box test suite for it, written in **Java with REST Assured and JUnit 5**. Every push runs the whole suite in GitHub Actions, and every run on `main` publishes an [Allure report](https://lcarvalhosdet.github.io/brokerage-api-tests/) that shows the requests and responses of each test.
 
 The API opens accounts, lists instruments and fills market orders. The test suite is the point of the project: contract checks, business rules, negative and boundary cases. Testing the API has already found [four real bugs](#bugs-found), each now guarded by a regression test. Next come data consistency, concurrency, real-time updates and load testing (see the [roadmap](#roadmap)).
 
@@ -9,6 +11,7 @@ The API opens accounts, lists instruments and fills market orders. The test suit
 | Part | Tools |
 | --- | --- |
 | API tests | REST Assured 5, JUnit 5, AssertJ, JSON Schema validation |
+| Test report | Allure Report 2, published on GitHub Pages |
 | Unit tests | JUnit 5, AssertJ |
 | Manual and exploratory checks | Postman collection, also runnable with Newman |
 | API under test | Java 21, Spring Boot 3.5, PostgreSQL 16, Flyway |
@@ -19,8 +22,9 @@ The API opens accounts, lists instruments and fills market orders. The test suit
 ```
 GitHub Actions
  ├── Unit tests ── order rules (no Spring, no database)
- └── API tests ─── REST Assured ── HTTP ──► brokerage-api (Spring Boot) ──► PostgreSQL
-                                            └──────── Docker Compose ────────┘
+ ├── API tests ─── REST Assured ── HTTP ──► brokerage-api (Spring Boot) ──► PostgreSQL
+ │                                          └──────── Docker Compose ────────┘
+ └── Allure report of the API tests ──► GitHub Pages (runs on main only)
 ```
 
 ```
@@ -68,6 +72,14 @@ The same probes found no overdraft: 40 buys sent at the same time, with cash for
 | Concurrency | Every read of an account stays consistent while orders are filled in parallel |
 | Order rules (unit) | Totals, balances and positions after buys and sells, and every rejection boundary |
 
+## Test report
+
+The [Allure report](https://lcarvalhosdet.github.io/brokerage-api-tests/) shows the latest run on `main`. Each test carries the requests it sent and the responses it got, so a failure can be understood without running it again. Suites group the tests by class, and Behaviors group them by area: Security, Market data and Trading.
+
+- **Published after failures too.** The report is built and deployed even when tests fail, so it always shows the real state of `main`.
+- **No secrets.** The API key is masked in the report and in the test logs. The report is public, and `-DapiKey` can carry a real key.
+- **A summary instead of thousands of requests.** The concurrency test sends thousands of requests in 3 seconds. Attaching each one took 19 MB for that test alone and cut the load it applies by about half. That test attaches a summary instead: orders filled, reads and inconsistent reads.
+
 ## Running locally
 
 You need Docker, Java 21 and Maven 3.9 or later.
@@ -78,6 +90,13 @@ mvn -pl api-tests test                    # full API suite
 mvn -pl api-tests test -Dgroups=smoke     # smoke tests only
 mvn -pl brokerage-api -am test            # unit tests
 docker compose down -v                    # stop and clean up
+```
+
+To see the Allure report of a local run:
+
+```bash
+mvn -pl api-tests clean test              # clean: results of earlier runs would show up as retries
+mvn -pl api-tests allure:serve            # builds the report and opens it in the browser
 ```
 
 To test another environment, pass its address and key:
@@ -133,7 +152,7 @@ Instrument prices are fictional: this is a simulator, not market data.
 - [ ] Concurrency: parallel orders must never overdraw an account
 - [ ] WebSocket feed with prices and order updates
 - [ ] Load test with k6 and failure-recovery tests
-- [ ] Allure report published on GitHub Pages
+- [x] Allure report published on GitHub Pages
 
 ## Author
 
